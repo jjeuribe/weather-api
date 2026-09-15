@@ -5,8 +5,7 @@ const {
   WeatherProviderAuthenticationException,
   WeatherProviderRateLimitException,
   WeatherProviderRequestFailedException,
-  WeatherProvider404NotFoundException,
-  WeatherProviderMissingQueryException
+  WeatherProvider404NotFoundException
 } = require('../../errors/WeatherProviderException')
 
 class WeatherstackHttpClient {
@@ -28,28 +27,28 @@ class WeatherstackHttpClient {
       })
 
       if (response.data?.error) {
-        this._handleApiError(response.data.error)
+        throw this._handleApiError(response.data.error)
       }
 
       return response.data
 
     } catch (error) {
-      // Let it progagate if it's already one of our custom domain exceptions
-      if (error instanceof WeatherProviderException) {
-        throw error;
-      }
-
-      // Delegate Axios infrastrcuture errors to dedicated private methods
       if (axios.isAxiosError(error)) {
-        // The request was sent but no response was received (maybe Network drop, DNS failure, Timeout)
-        if (error.request) {
-          this._handleNetworkError(error)
-        }
-
         // The request was sent and the server responded with an error code (4xx/5xx)
         if (error.response) {
-          this._handleHttpError(error)
+          throw this._handleHttpError(error)
         }
+
+        // The request was sent but no response was received (maybe Network drop, DNS failure, Timeout)
+        if (error.request) {
+          throw this._handleNetworkError(error)
+        }
+
+        // Something went wrong setting up the request itself (mabye bad config, etc)
+        throw new WeatherProviderException(
+          `Failed to make request to weather provider ${error.message}`,
+          { cause: error }
+        )
       }
 
       throw error
@@ -57,47 +56,33 @@ class WeatherstackHttpClient {
   }
 
   _handleApiError(error) {
-    const message = error.info
-    const code = error.code
-    const type = error.type
-
-    if (code === 101 && type === 'unauthorized') {
-      throw new WeatherProviderAuthenticationException(message)
+    const { code, info } = error
+    const EXCEPTIONS = {
+      101: WeatherProviderAuthenticationException,
+      104: WeatherProviderRateLimitException,
+      615: WeatherProviderRequestFailedException,
+      404: WeatherProvider404NotFoundException,
     }
 
-    if (code === 104 && type === 'usage_limit_reached') {
-      throw new WeatherProviderRateLimitException(message)
-    }
+    const Exception = EXCEPTIONS[code] ?? WeatherProviderException
 
-    if (code === 615 && type === 'request_failed') {
-      throw new WeatherProviderRequestFailedException(message)
-    }
-
-    if (code === 404 && type === '404_not_found') {
-      throw new WeatherProvider404NotFoundException(message)
-    }
-
-    if (code === 601 && type === 'missing_query') {
-      throw new WeatherProviderMissingQueryException(message)
-    }
-
-    throw new WeatherProviderException(message)
+    return new Exception(info, { cause: error })
   }
 
   _handleHttpError(error) {
     if (error.response.data?.error) {
-      this._handleApiError(error.response.data?.error)
+      return this._handleApiError(error.response.data.error)
     }
 
-    throw new WeatherProviderException(
+    return new WeatherProviderException(
       `Weather provider failed with HTTP status ${error.response.status}`,
       { cause: error }
     )
   }
 
   _handleNetworkError(error) {
-    throw new WeatherProviderConnectionException(
-      `Unable to connect to weather provider. Reason: ${error.code || 'No response'}`,
+    return new WeatherProviderConnectionException(
+      `Unable to connect to weather provider. Reason: ${error.code}`,
       { cause: error }
     )
   }

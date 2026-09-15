@@ -1,12 +1,19 @@
-const Weather = require('../../models/Weather');
+function toWeather(weatherData) {
+  const {
+    temperature,
+    wind_speed,
+    humidity,
+    feelslike
+  } = weatherData.current
 
-function mapWeatherstack(data) {
-  return new Weather({
-    temperature: data.current.temperature,
-    windSpeed: data.current.wind_speed,
-    humidity: data.current.humidity,
-    feelsLike: data.current.feelslike
-  })
+  return {
+    temperature,
+    windSpeed: wind_speed,
+    humidity,
+    feelsLike: feelslike
+  }
 }
 
-module.exports = mapWeatherstack
+module.exports = {
+  toWeather
+}

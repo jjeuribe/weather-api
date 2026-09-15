@@ -20,15 +20,11 @@ class WeatherProviderRequestFailedException
 class WeatherProvider404NotFoundException
   extends WeatherProviderException { }
 
-class WeatherProviderMissingQueryException
-  extends WeatherProviderException { }
-
 module.exports = {
   WeatherProviderException,
   WeatherProviderConnectionException,
   WeatherProviderAuthenticationException,
   WeatherProviderRateLimitException,
   WeatherProviderRequestFailedException,
-  WeatherProvider404NotFoundException,
-  WeatherProviderMissingQueryException
+  WeatherProvider404NotFoundException
 }

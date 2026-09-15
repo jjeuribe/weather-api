@@ -3,8 +3,12 @@ class WeatherService {
     this._weatherProvider = weatherProvider
   }
 
-  fetchByCoordinates(lat, lon) {
-    return this._weatherProvider.fetchByCoordinates(lat, lon)
+  getForAddress(address) {
+    return this._weatherProvider.fetchByAddress(address)
+  }
+
+  getForCoordinates({ latitude, longitude }) {
+    return this._weatherProvider.fetchByCoordinates({ latitude, longitude })
   }
 }
 
